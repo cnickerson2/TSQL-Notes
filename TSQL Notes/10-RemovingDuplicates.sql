@@ -1,0 +1,86 @@
+-- DELETE FROM ORIGINAL TABLE
+IF OBJECT_ID('MyOrders') IS NOT NULL
+	DROP TABLE MyOrders;
+GO
+
+SELECT * INTO MyOrders FROM dbo.OrderDetails
+UNION ALL
+SELECT * FROM OrderDetails
+UNION ALL
+SELECT * FROM OrderDetails
+GO
+
+SELECT oid, ROW_NUMBER() OVER(PARTITION BY oid ORDER BY (SELECT NULL)) AS n
+FROM MyOrders
+
+SELECT * FROM MyOrders ORDER BY oid;
+
+WITH C AS
+(
+	SELECT oid, ROW_NUMBER() OVER(PARTITION BY oid ORDER BY (SELECT NULL)) AS n
+	FROM MyOrders
+)
+DELETE FROM C
+WHERE n > 1;
+
+SELECT * FROM MyOrders;
+
+-- INSERT INTO TEMP TABLE
+IF OBJECT_ID('MyOrders') IS NOT NULL
+	DROP TABLE MyOrders;
+GO
+
+SELECT * INTO MyOrders FROM dbo.OrderDetails
+UNION ALL
+SELECT * FROM OrderDetails
+UNION ALL
+SELECT * FROM OrderDetails
+GO
+
+WITH C AS
+(
+	SELECT *, ROW_NUMBER() OVER(PARTITION BY oid ORDER BY (SELECT NULL)) AS n
+	FROM MyOrders
+)
+SELECT oid, pid, qty
+INTO OrdersTmp
+FROM C
+WHERE n = 1;
+
+DROP TABLE MyOrders;
+EXEC sp_rename 'OrdersTmp', 'MyOrders'
+
+SELECT * FROM MyOrders ORDER BY oid;
+
+-- RANK ALL DISTINCT or all NON-DISTINCT
+IF OBJECT_ID('MyOrders') IS NOT NULL
+	DROP TABLE MyOrders;
+GO
+
+SELECT * INTO MyOrders FROM dbo.OrderDetails
+UNION ALL
+SELECT * FROM OrderDetails
+UNION ALL
+SELECT * FROM OrderDetails
+GO
+
+SELECT	oid, 
+		ROW_NUMBER() OVER(ORDER BY oid) AS rownum,
+		RANK() OVER(ORDER BY oid) AS rnk
+FROM MyOrders;
+
+WITH C AS
+(
+	SELECT	oid, 
+		ROW_NUMBER() OVER(ORDER BY oid) AS rownum,
+		RANK() OVER(ORDER BY oid) AS rnk
+	FROM MyOrders
+)
+DELETE FROM C
+WHERE rownum <> rnk;
+
+SELECT * FROM MyOrders;
+
+IF OBJECT_ID('MyOrders') IS NOT NULL
+	DROP TABLE MyOrders;
+GO
